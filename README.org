@@ -1,0 +1,37 @@
+* Package scala-repl.el
+
+** Introduction
+
+This package `scala-repl.el` provides functionality to interactive with a Scala console from within Emacs. The intention is to bring REPL driven development experience into Emacs.
+
+It automatically detects the project root by simply searching for =build.sbt= or =build.sc= files in the current folder and its ancestors, till the root folder. When nothing is found, it will simply invoke ~scala-cli~.
+
+** Usage
+
+To use this package, simply put it under your load path and run:
+
+#+BEGIN_SRC emacs-lisp
+  (require 'scala-repl)
+#+END_SRC
+
+- =scala-repl-run= fires an REPL and attach to it in an automatic way.
+- =scala-repl-run-custom= simply runs an REPL with custom commands. The REPL will /not/ be attached automatically.
+- =scala-repl-attach= sets some buffer-local variables to attach the "current" buffer to an REPL. You only need it when you are manually starting an REPL.
+- =scala-repl-detach= as you can guess from its name.
+- =scala-repl-restart= restarts the attached REPL process.
+- =scala-repl-clear= cleans the content of attached REPL buffer.
+- =scala-repl-eval-buffer=, =scala-repl-eval-region-or-line=, =scala-repl-eval-region= and =scala-repl-eval-current-line= are used to evaluate your code.
+
+There are some other commands that will use =:load= function. But I did not make it work with ~package~ definition though. If you know how, please open an issue and teach me. :-)
+
+** Customization 
+
+- ~scala-repl-command-alist~ can be used to define the mappings between project type (=sbt=, =mill= or =NIL=) and corresponding commands to invoke. Each argument of the command is one element in the list. By default it is set to:
+
+  #+BEGIN_SRC emacs-lisp
+    '((mill "mill" "-i" "_.console")
+      (sbt "sbt" "console")
+      (nil "scala-cli" "repl" "-deprecation"))
+  #+END_SRC
+
+- ~scala-repl-buffer-basename~ specifies the default "base" name for REPL buffer. You probably do not need/want to change it, although you are free to mess with it and see what changes.
