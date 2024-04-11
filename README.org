@@ -2,9 +2,9 @@
 
 ** Introduction
 
-This package `scala-repl.el` provides functionality to interactive with a Scala console from within Emacs. The intention is to bring REPL driven development experience into Emacs.
+This package `scala-repl.el` intends to bring REPL driven development experience to Emacs, for Scala hackers.
 
-It automatically detects the project root by simply searching for =build.sbt= or =build.sc= files in the current folder and its ancestors, till the root folder. When nothing is found, it will simply invoke ~scala-cli~.
+It automatically detects the project root by simply searching for =build.sbt= or =build.sc= files in the current folder and its ancestors, till the root folder. When nothing is found, it will simply invoke ~scala-cli~. The command to run when a project is (not) found is configurable.
 
 ** Usage
 
