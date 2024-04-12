@@ -74,7 +74,8 @@
   :type 'alist)
 
 (defun scala-repl-run (&optional prefix)
-  "Run the REPL and show it in a new window.  If PREFIX is given, run a custom command."
+  "Run the REPL and show it in a new window.
+If PREFIX is given, run a custom command."
   (interactive "P")
   (scala-repl--detach)
   (if (and prefix (> (car prefix) 0))
@@ -93,7 +94,7 @@
          (switches (if space-position
                        (split-string-and-unquote (substring command (1+ space-position)))
                      nil)))
-    (comint-run program switches)))
+    (call-interactively (lambda (&rest args) comint-run program switches))))
 
 (defun scala-repl-attach (&optional buffer-name)
   "Attach current buffer (or with BUFFER-NAME) to the REPL."
