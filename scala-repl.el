@@ -47,6 +47,10 @@
 ;; Note that the evaluation functionality is restricted by
 ;; corresponding Scala REPL.
 ;;
+;; Also note that this package *might* work on Emacs < 29.1, but it is
+;; not guaranteed. You are welcome to open an issue on the GitHub page
+;; and let know if it does.
+;;
 ;; This package does not define any minor mode. You are free to bind
 ;; its functions in scala-mode or scala-ts-mode however you like.
 
