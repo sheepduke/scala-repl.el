@@ -94,7 +94,9 @@ If PREFIX is given, run a custom command."
          (switches (if space-position
                        (split-string-and-unquote (substring command (1+ space-position)))
                      nil)))
-    (call-interactively (lambda (&rest args) comint-run program switches))))
+    (call-interactively (lambda (&rest args)
+                          (declare (ignore args))
+                          (comint-run program switches)))))
 
 (defun scala-repl-attach (&optional buffer-name)
   "Attach current buffer (or with BUFFER-NAME) to the REPL."
@@ -141,7 +143,8 @@ If PREFIX is given, run a custom command."
   (scala-repl-eval-raw-string (format ":load %s\n" file-name)))
 
 (defun scala-repl-eval-region-or-line ()
-  "Evaluate the selected region when a region is active.  Otherwise evaluate current line."
+  "Evaluate the selected region when a region is active.
+Otherwise, evaluate current line."
   (interactive)
   (if (region-active-p)
       (scala-repl-eval-region)
