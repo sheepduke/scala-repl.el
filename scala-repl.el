@@ -94,9 +94,7 @@ If PREFIX is given, run a custom command."
          (switches (if space-position
                        (split-string-and-unquote (substring command (1+ space-position)))
                      nil)))
-    (call-interactively (lambda (&rest args)
-                          (declare (ignore args))
-                          (comint-run program switches)))))
+    (comint-run program switches)))
 
 (defun scala-repl-attach (&optional buffer-name)
   "Attach current buffer (or with BUFFER-NAME) to the REPL."
