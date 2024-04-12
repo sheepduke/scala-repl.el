@@ -1,3 +1,54 @@
+;;; scala-repl.el --- Scala REPL Mode      -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2024  Daian YUE
+
+;; Author: Daian YUE <sheepduke@gmail.com>
+;; Version: 0.1.0
+;; Filename: scala-repl.el
+;; Package-Requires: ((emacs "29.1"))
+;; Keywords: scala, repl
+;; URL: https://github.com/sheepduke/scala-repl.el
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; This package provides functions to perform REPL-driven development
+;; for Scala programming language.
+;;
+;; Currently it supports the following features:
+;;
+;; 1. Automatically detect project root, trigger a REPL session and
+;;    attach to it.
+;; 
+;; 2. Evaluate source code in the REPL session that the current buffer
+;;    is attached to.
+;; 
+;; 3. Customize commands to run for SBT/Mill projects or non-project
+;;    files.
+;; 
+;; 4. Run ad-hoc REPL sessions with custom commands and manually
+;;    attach to/detach from it.
+;; 
+;; 5. Support multiple REPL sessions for different projects/ad-hoc
+;;    files.
+;;
+;; Note that the evaluation functionality is restricted by
+;; corresponding Scala REPL.
+
+;;; Code:
+
 (defgroup scala-repl nil
   "Group for Scala REPL."
   :group 'scala)
@@ -103,7 +154,8 @@ evaluate current line."
   "Send selected region to the REPL and evaluate it."
   (interactive)
   (if (region-active-p)
-      (let ((buffer-name (scala-repl--ensure-session-buffer)))
+      (progn
+        (scala-repl--ensure-session-buffer)
         (scala-repl-eval-string (buffer-substring (region-beginning)
                                                   (region-end))))
     (message "Region not active")))
@@ -137,6 +189,7 @@ evaluate current line."
       (comint-send-string buffer-name string))))
 
 (defun scala-repl--get-buffer-name (project-type project-root)
+  "Get the name of REPL buffer."
   (unless (boundp 'scala-repl-buffer-name)
     (setq-local scala-repl-buffer-name
                 (if project-type
@@ -148,10 +201,10 @@ evaluate current line."
   scala-repl-buffer-name)
 
 (defun scala-repl--detach ()
-  (interactive)
   (makunbound 'scala-repl-buffer-name))
 
 (defun scala-repl--get-command (project-type)
+  "Get the command to start the REPL."
   (cdr (assoc project-type scala-repl-command-alist)))
 
 (defun scala-repl--ensure-project-root ()
@@ -171,3 +224,4 @@ evaluate current line."
        (t (scala-repl--locate-project-root (expand-file-name (format "%s/.." directory))))))))
 
 (provide 'scala-repl)
+;;; scala-repl.el ends here
