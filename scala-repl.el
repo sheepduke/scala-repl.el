@@ -48,10 +48,10 @@
 ;; corresponding Scala REPL.
 ;;
 ;; Also note that this package *might* work on Emacs < 29.1, but it is
-;; not guaranteed. You are welcome to open an issue on the GitHub page
+;; not guaranteed.  You are welcome to open an issue on the GitHub page
 ;; and let know if it does.
 ;;
-;; This package does not define any minor mode. You are free to bind
+;; This package does not define any minor mode.  You are free to bind
 ;; its functions in scala-mode or scala-ts-mode however you like.
 
 ;;; Code:
@@ -74,7 +74,7 @@
   :type 'alist)
 
 (defun scala-repl-run (&optional prefix)
-  "Run the REPL and show it in a new window."
+  "Run the REPL and show it in a new window.  If PREFIX is given, run a custom command."
   (interactive "P")
   (scala-repl--detach)
   (if (and prefix (> (car prefix) 0))
@@ -83,7 +83,7 @@
   (message "REPL running. Happy hacking"))
 
 (defun scala-repl-run-custom (&optional command)
-  "Just run the REPL with custom commands under current directory."
+  "Just run the REPL with custom COMMAND under current directory."
   (interactive "MREPL command: ")
   (let* ((command (string-trim command))
          (space-position (cl-position ?\s command))
@@ -96,7 +96,7 @@
     (comint-run program switches)))
 
 (defun scala-repl-attach (&optional buffer-name)
-  "Attach current buffer to the"
+  "Attach current buffer (or with BUFFER-NAME) to the REPL."
   (interactive "bChoose REPL Buffer:")
   (setq-local scala-repl-buffer-name buffer-name)
   (message "REPL %s attached" buffer-name))
@@ -135,13 +135,12 @@
     (scala-repl-eval-raw-string (format ":load %s\n" (buffer-name)))))
 
 (defun scala-repl-load-file (&optional file-name)
-  "Load the file into REPL using `:load' command."
+  "Load the file of FILE-NAME into REPL using `:load' command."
   (interactive "MLoad file: ")
   (scala-repl-eval-raw-string (format ":load %s\n" file-name)))
 
 (defun scala-repl-eval-region-or-line ()
-  "Evaluate the selected region when a region is active. Otherwise
-evaluate current line."
+  "Evaluate the selected region when a region is active.  Otherwise evaluate current line."
   (interactive)
   (if (region-active-p)
       (scala-repl-eval-region)
@@ -168,6 +167,7 @@ evaluate current line."
     (message "Region not active")))
 
 (defun scala-repl--ensure-session-buffer ()
+  "Ensure the session buffer is created."
   (if (and (boundp 'scala-repl-buffer-name)
            (process-live-p (get-buffer-process scala-repl-buffer-name)))
       scala-repl-buffer-name
@@ -182,21 +182,23 @@ evaluate current line."
       buffer-name)))
 
 (defun scala-repl-eval-string (&optional string)
-  "Quote given string in braces, send it to the REPL and evaluate it."
+  "Quote given STRING in braces, send it to the REPL and evaluate it."
   (interactive "MEval: ")
   (save-excursion
     (let* ((buffer-name (scala-repl--ensure-session-buffer)))
       (comint-send-string buffer-name (format "{\n%s}\n" string)))))
 
 (defun scala-repl-eval-raw-string (&optional string)
-  "Send given raw string to the REPL and evaluate it."
+  "Send given raw STRING to the REPL and evaluate it."
   (interactive "MEval: ")
   (save-excursion
     (let* ((buffer-name (scala-repl--ensure-session-buffer)))
       (comint-send-string buffer-name string))))
 
 (defun scala-repl--get-buffer-name (project-type project-root)
-  "Get the name of REPL buffer."
+  "Get the name of REPL buffer.
+PROJECT-TYPE is a symbol indicating the type of project.
+PROJECT-ROOT is the root of project."
   (unless (boundp 'scala-repl-buffer-name)
     (setq-local scala-repl-buffer-name
                 (if project-type
@@ -208,19 +210,22 @@ evaluate current line."
   scala-repl-buffer-name)
 
 (defun scala-repl--detach ()
+  "Detach current buffer."
   (makunbound 'scala-repl-buffer-name))
 
 (defun scala-repl--get-command (project-type)
-  "Get the command to start the REPL."
+  "Get the command (according to PROJECT-TYPE) to start the REPL."
   (cdr (assoc project-type scala-repl-command-alist)))
 
 (defun scala-repl--ensure-project-root ()
+  "Read the cached project root, or determine and cache it."
   (unless (boundp 'scala-repl-project-type-root)
     (setq-local scala-repl-project-type-root
                 (scala-repl--locate-project-root ".")))
   scala-repl-project-type-root)
 
 (defun scala-repl--locate-project-root (directory)
+  "Locate project root of given DIRECTORY."
   (let ((directory (expand-file-name directory)))
     (if (string= directory "/")
         nil
