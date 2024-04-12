@@ -46,6 +46,9 @@
 ;;
 ;; Note that the evaluation functionality is restricted by
 ;; corresponding Scala REPL.
+;;
+;; This package does not define any minor mode. You are free to bind
+;; its functions in scala-mode or scala-ts-mode however you like.
 
 ;;; Code:
 
