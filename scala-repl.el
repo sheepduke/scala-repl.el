@@ -6,7 +6,7 @@
 ;; Version: 0.1.0
 ;; Filename: scala-repl.el
 ;; Package-Requires: ((emacs "29.1"))
-;; Keywords: scala, repl
+;; Keywords: languages, tools
 ;; URL: https://github.com/sheepduke/scala-repl.el
 
 ;; This program is free software; you can redistribute it and/or modify
