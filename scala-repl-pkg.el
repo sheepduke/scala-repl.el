@@ -1,6 +1,6 @@
 (define-package "scala-repl" "20240412.2011" "Scala REPL Interaction"
   '((emacs "29.1"))
-  :commit "6ecec8801933bfcda0089d0ff397437f795a1381"
+  :commit "1c518fda412c1049c3f45fc417238c940837c417"
   :authors '(("Daian YUE" . "sheepduke@gmail.com"))
   :maintainers '(("Daian YUE" . "sheepduke@gmail.com"))
   :maintainer '("Daian YUE" . "sheepduke@gmail.com")
