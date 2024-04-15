@@ -73,14 +73,20 @@
   :group 'scala-repl
   :type 'alist)
 
+(defvar-local scala-repl-buffer-name nil
+  "The buffer name of REPL process.")
+
+(defvar-local scala-repl-project-type-root nil
+  "A cons of project type and root directory.")
+
 (defun scala-repl-run (&optional prefix)
   "Run the REPL and show it in a new window.
 If PREFIX is given, run a custom command."
   (interactive "P")
   (scala-repl--detach)
   (if (and prefix (> (car prefix) 0))
-      (call-interactively 'scala-repl-run-custom)
-    (switch-to-buffer-other-window (scala-repl--ensure-session-buffer)))
+      (call-interactively #'scala-repl-run-custom)
+    (scala-repl--ensure-session-buffer))
   (message "REPL running. Happy hacking"))
 
 (defun scala-repl-run-custom (&optional command)
@@ -93,8 +99,10 @@ If PREFIX is given, run a custom command."
                     command))
          (switches (if space-position
                        (split-string-and-unquote (substring command (1+ space-position)))
-                     nil)))
-    (comint-run program switches)))
+                     nil))
+         (buffer-name (format "*%s*" (file-name-nondirectory program))))
+    (apply #'make-comint-in-buffer buffer-name buffer-name program nil switches)
+    (switch-to-buffer-other-window buffer-name)))
 
 (defun scala-repl-attach (&optional buffer-name)
   "Attach current buffer (or with BUFFER-NAME) to the REPL."
@@ -170,7 +178,7 @@ Otherwise, evaluate current line."
 
 (defun scala-repl--ensure-session-buffer ()
   "Ensure the session buffer is created."
-  (if (and (boundp 'scala-repl-buffer-name)
+  (if (and scala-repl-buffer-name
            (process-live-p (get-buffer-process scala-repl-buffer-name)))
       scala-repl-buffer-name
     (let* ((project-type-root (scala-repl--ensure-project-root))
@@ -180,7 +188,8 @@ Otherwise, evaluate current line."
            (buffer-name (scala-repl--get-buffer-name project-type project-root))
            (command (scala-repl--get-command project-type)))
       (let ((default-directory project-root))
-        (apply 'make-comint-in-buffer buffer-name buffer-name (car command) nil (cdr command)))
+        (apply #'make-comint-in-buffer buffer-name buffer-name (car command) nil (cdr command)))
+      (switch-to-buffer-other-window buffer-name)
       buffer-name)))
 
 (defun scala-repl-eval-string (&optional string)
@@ -201,7 +210,7 @@ Otherwise, evaluate current line."
   "Get the name of REPL buffer.
 PROJECT-TYPE is a symbol indicating the type of project.
 PROJECT-ROOT is the root of project."
-  (unless (boundp 'scala-repl-buffer-name)
+  (unless scala-repl-buffer-name
     (setq-local scala-repl-buffer-name
                 (if project-type
                     (format "*%s - %s*"
@@ -213,7 +222,7 @@ PROJECT-ROOT is the root of project."
 
 (defun scala-repl--detach ()
   "Detach current buffer."
-  (makunbound 'scala-repl-buffer-name))
+  (setq-local scala-repl-buffer-name nil))
 
 (defun scala-repl--get-command (project-type)
   "Get the command (according to PROJECT-TYPE) to start the REPL."
@@ -221,7 +230,7 @@ PROJECT-ROOT is the root of project."
 
 (defun scala-repl--ensure-project-root ()
   "Read the cached project root, or determine and cache it."
-  (unless (boundp 'scala-repl-project-type-root)
+  (unless scala-repl-project-type-root
     (setq-local scala-repl-project-type-root
                 (scala-repl--locate-project-root ".")))
   scala-repl-project-type-root)
