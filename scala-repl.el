@@ -56,6 +56,9 @@
 
 ;;; Code:
 
+(require 'comint)
+(require 'cl-lib)
+
 (defgroup scala-repl nil
   "Group for Scala REPL."
   :group 'scala)
@@ -119,14 +122,15 @@ If PREFIX is given, run a custom command."
 (defun scala-repl-restart ()
   "Restart the REPL session."
   (interactive)
-  (let* ((buffer-name (scala-repl--ensure-session-buffer))
-         (process (get-buffer-process buffer-name)))
-    (while (process-live-p process)
-      (kill-process process)))
-  (message "Restarting REPL...")
-  (scala-repl--ensure-session-buffer)
-  (with-current-buffer (buffer-name)
-    (goto-char (point-max))))
+  (save-excursion
+    (let* ((buffer-name (scala-repl--ensure-session-buffer t))
+           (process (get-buffer-process buffer-name)))
+      (while (process-live-p process)
+        (kill-process process)))
+    (message "Restarting REPL...")
+    (scala-repl--ensure-session-buffer nil)
+    (with-current-buffer (buffer-name)
+      (goto-char (point-max)))))
 
 (defun scala-repl-clear ()
   "Clear the REPL buffer."
@@ -176,7 +180,7 @@ Otherwise, evaluate current line."
                                                   (region-end))))
     (message "Region not active")))
 
-(defun scala-repl--ensure-session-buffer ()
+(defun scala-repl--ensure-session-buffer (&optional no-switch-p)
   "Ensure the session buffer is created."
   (if (and scala-repl-buffer-name
            (process-live-p (get-buffer-process scala-repl-buffer-name)))
@@ -189,7 +193,8 @@ Otherwise, evaluate current line."
            (command (scala-repl--get-command project-type)))
       (let ((default-directory project-root))
         (apply #'make-comint-in-buffer buffer-name buffer-name (car command) nil (cdr command)))
-      (switch-to-buffer-other-window buffer-name)
+      (when no-switch-p
+        (switch-to-buffer-other-window buffer-name))
       buffer-name)))
 
 (defun scala-repl-eval-string (&optional string)
