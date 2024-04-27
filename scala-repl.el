@@ -193,7 +193,7 @@ Otherwise, evaluate current line."
            (command (scala-repl--get-command project-type)))
       (let ((default-directory project-root))
         (apply #'make-comint-in-buffer buffer-name buffer-name (car command) nil (cdr command)))
-      (when no-switch-p
+      (unless no-switch-p
         (switch-to-buffer-other-window buffer-name))
       buffer-name)))
 
