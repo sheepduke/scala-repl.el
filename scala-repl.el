@@ -3,7 +3,7 @@
 ;; Copyright (C) 2024  Daian YUE
 
 ;; Author: Daian YUE <sheepduke@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.2.0
 ;; Filename: scala-repl.el
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: languages, tools
@@ -71,6 +71,7 @@
 (defcustom scala-repl-command-alist
   '((mill "mill" "-i" "_.console")
     (sbt "sbt" "console")
+    (scala-cli "scala-cli" "repl" "-deprecation")
     (nil "scala-cli" "repl" "-deprecation"))
   "The alist of REPL commands."
   :group 'scala-repl
@@ -87,7 +88,7 @@
 If PREFIX is given, run a custom command."
   (interactive "P")
   (scala-repl--detach)
-  (if (and prefix (> (car prefix) 0))
+  (if (and prefix (> (prefix-numeric-value prefix) 0))
       (call-interactively #'scala-repl-run-custom)
     (scala-repl--ensure-session-buffer))
   (message "REPL running. Happy hacking"))
@@ -129,7 +130,7 @@ If PREFIX is given, run a custom command."
         (kill-process process)))
     (message "Restarting REPL...")
     (scala-repl--ensure-session-buffer nil)
-    (with-current-buffer (buffer-name)
+    (with-current-buffer buffer-name
       (goto-char (point-max)))))
 
 (defun scala-repl-clear ()
@@ -145,12 +146,12 @@ If PREFIX is given, run a custom command."
   (save-buffer)
   (if (scala-repl--ensure-project-root)
       (message "Not implemented yet.")
-    (scala-repl-eval-raw-string (format ":load %s\n" (buffer-name)))))
+    (scala-repl-eval-raw-string (format ":load %s\n" (buffer-file-name)))))
 
 (defun scala-repl-load-file (&optional file-name)
   "Load the file of FILE-NAME into REPL using `:load' command."
-  (interactive "MLoad file: ")
-  (scala-repl-eval-raw-string (format ":load %s\n" file-name)))
+  (interactive "fLoad file: ")
+  (scala-repl-eval-raw-string (format ":load %s\n" (expand-file-name file-name))))
 
 (defun scala-repl-eval-region-or-line ()
   "Evaluate the selected region when a region is active.
