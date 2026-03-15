@@ -44,6 +44,8 @@
 ;; 5. Support multiple REPL sessions for different projects/ad-hoc
 ;;    files.
 ;;
+;; 6. Provide a minor mode that contains some default key bindings.
+;;
 ;; Note that the evaluation functionality is restricted by
 ;; corresponding Scala REPL.
 ;;
@@ -51,9 +53,6 @@
 ;; not guaranteed.  You are welcome to open an issue on the GitHub page
 ;; and let know if it does.
 ;;
-;; This package does not define any minor mode.  You are free to bind
-;; its functions in scala-mode or scala-ts-mode however you like.
-
 ;;; Code:
 
 (require 'comint)
@@ -91,13 +90,11 @@
 ;;  Mode
 ;; ============================================================
 
-(defvar scala-repl-minor-mode-map
+(defvar scala-repl-mode-map
   (let ((map (make-sparse-keymap)))
     ;; REPL management.
     (define-key map (kbd "C-c C-z") #'scala-repl-run)
     (define-key map (kbd "C-c C-x") #'scala-repl-restart)
-    (define-key map (kbd "C-c C-s") #'scala-repl-reset)
-    (define-key map (kbd "C-c C-o") #'scala-repl-clear)
     (define-key map (kbd "C-c C-a") #'scala-repl-attach)
     (define-key map (kbd "C-c C-d") #'scala-repl-detach)
 
@@ -105,19 +102,18 @@
     (define-key map (kbd "C-c C-c") #'scala-repl-eval-region-or-line)
     (define-key map (kbd "C-c C-b") #'scala-repl-eval-buffer)
     (define-key map (kbd "C-c C-r") #'scala-repl-eval-region)
-    (define-key map (kbd "C-c C-k") #'scala-repl-load-current-file)
-    (define-key map (kbd "C-c C-l") #'scala-repl-load-file)
+    (define-key map (kbd "C-c C-o") #'scala-repl-clear-output)
 
     map)
-  "Keymap for `scala-repl-minor-mode`.")
+  "Keymap for `scala-repl-mode`.")
 
-(define-minor-mode scala-repl-minor-mode
+(define-minor-mode scala-repl-mode
   "Minor mode for interacting with a Scala REPL.
 
 Provides convenient keybindings for starting a REPL and sending
 code to it."
   :lighter " ScalaREPL"
-  :keymap scala-repl-minor-mode-map)
+  :keymap scala-repl-mode-map)
 
 ;; ============================================================
 ;;  REPL & Session
@@ -179,23 +175,12 @@ If PREFIX is given, run a custom command."
 ;;  Evaluation
 ;; ============================================================
 
-(defun scala-repl-clear ()
+(defun scala-repl-clear-output ()
   "Clear the REPL buffer."
   (interactive)
   (let* ((buffer-name (scala-repl--ensure-session-buffer)))
     (with-current-buffer buffer-name
       (comint-clear-buffer))))
-
-(defun scala-repl-load-current-file ()
-  "Save the file being edited and load it."
-  (interactive)
-  (save-buffer)
-  (scala-repl-send-string (format ":load %s\n" (buffer-file-name))))
-
-(defun scala-repl-load-file (&optional file-name)
-  "Load the file of FILE-NAME into REPL using `:load' command."
-  (interactive "fLoad file: ")
-  (scala-repl-send-string (format ":load %s\n" (expand-file-name file-name))))
 
 (defun scala-repl-eval-region-or-line ()
   "Evaluate the selected region when a region is active.
