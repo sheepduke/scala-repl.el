@@ -59,6 +59,10 @@
 (require 'comint)
 (require 'cl-lib)
 
+;; ============================================================
+;;  Variables
+;; ============================================================
+
 (defgroup scala-repl nil
   "Group for Scala REPL."
   :group 'scala)
@@ -83,6 +87,42 @@
 (defvar-local scala-repl-project-type-root nil
   "A cons of project type and root directory.")
 
+;; ============================================================
+;;  Mode
+;; ============================================================
+
+(defvar scala-repl-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    ;; REPL management.
+    (define-key map (kbd "C-c C-z") #'scala-repl-run)
+    (define-key map (kbd "C-c C-x") #'scala-repl-restart)
+    (define-key map (kbd "C-c C-s") #'scala-repl-reset)
+    (define-key map (kbd "C-c C-o") #'scala-repl-clear)
+    (define-key map (kbd "C-c C-a") #'scala-repl-attach)
+    (define-key map (kbd "C-c C-d") #'scala-repl-detach)
+
+    ;; Evaluation.
+    (define-key map (kbd "C-c C-c") #'scala-repl-eval-region-or-line)
+    (define-key map (kbd "C-c C-b") #'scala-repl-eval-buffer)
+    (define-key map (kbd "C-c C-r") #'scala-repl-eval-region)
+    (define-key map (kbd "C-c C-k") #'scala-repl-load-current-file)
+    (define-key map (kbd "C-c C-l") #'scala-repl-load-file)
+
+    map)
+  "Keymap for `scala-repl-minor-mode`.")
+
+(define-minor-mode scala-repl-minor-mode
+  "Minor mode for interacting with a Scala REPL.
+
+Provides convenient keybindings for starting a REPL and sending
+code to it."
+  :lighter " ScalaREPL"
+  :keymap scala-repl-minor-mode-map)
+
+;; ============================================================
+;;  REPL & Session
+;; ============================================================
+
 (defun scala-repl-run (&optional prefix)
   "Run the REPL and show it in a new window.
 If PREFIX is given, run a custom command."
@@ -90,7 +130,7 @@ If PREFIX is given, run a custom command."
   (scala-repl--detach)
   (if (and prefix (> (prefix-numeric-value prefix) 0))
       (call-interactively #'scala-repl-run-custom)
-    (scala-repl--ensure-session-buffer))
+    (display-buffer (scala-repl--ensure-session-buffer)))
   (message "REPL running. Happy hacking"))
 
 (defun scala-repl-run-custom (&optional command)
@@ -106,7 +146,17 @@ If PREFIX is given, run a custom command."
                      nil))
          (buffer-name (format "*%s*" (file-name-nondirectory program))))
     (apply #'make-comint-in-buffer buffer-name buffer-name program nil switches)
-    (switch-to-buffer-other-window buffer-name)))
+    (display-buffer buffer-name)))
+
+(defun scala-repl-restart ()
+  "Restart the REPL session."
+  (interactive)
+  (let* ((buffer-name (scala-repl--ensure-session-buffer))
+         (process (get-buffer-process buffer-name)))
+    (while (process-live-p process)
+      (kill-process process))
+    (message "Restarting REPL...")
+    (display-buffer (scala-repl--ensure-session-buffer))))
 
 (defun scala-repl-attach (&optional buffer-name)
   "Attach current buffer (or with BUFFER-NAME) to the REPL."
@@ -120,18 +170,14 @@ If PREFIX is given, run a custom command."
   (scala-repl--detach)
   (message "REPL detached"))
 
-(defun scala-repl-restart ()
-  "Restart the REPL session."
+(defun scala-repl-reset ()
+  "Reset the REPL session."
   (interactive)
-  (save-excursion
-    (let* ((buffer-name (scala-repl--ensure-session-buffer t))
-           (process (get-buffer-process buffer-name)))
-      (while (process-live-p process)
-        (kill-process process)))
-    (message "Restarting REPL...")
-    (scala-repl--ensure-session-buffer nil)
-    (with-current-buffer buffer-name
-      (goto-char (point-max)))))
+  (scala-repl-send-string ":reset\n"))
+
+;; ============================================================
+;;  Evaluation
+;; ============================================================
 
 (defun scala-repl-clear ()
   "Clear the REPL buffer."
@@ -140,18 +186,16 @@ If PREFIX is given, run a custom command."
     (with-current-buffer buffer-name
       (comint-clear-buffer))))
 
-(defun scala-repl-save-and-load ()
-  "Load the file corresponding to current buffer."
+(defun scala-repl-load-current-file ()
+  "Save the file being edited and load it."
   (interactive)
   (save-buffer)
-  (if (scala-repl--ensure-project-root)
-      (message "Not implemented yet.")
-    (scala-repl-eval-raw-string (format ":load %s\n" (buffer-file-name)))))
+  (scala-repl-send-string (format ":load %s\n" (buffer-file-name))))
 
 (defun scala-repl-load-file (&optional file-name)
   "Load the file of FILE-NAME into REPL using `:load' command."
   (interactive "fLoad file: ")
-  (scala-repl-eval-raw-string (format ":load %s\n" (expand-file-name file-name))))
+  (scala-repl-send-string (format ":load %s\n" (expand-file-name file-name))))
 
 (defun scala-repl-eval-region-or-line ()
   "Evaluate the selected region when a region is active.
@@ -164,12 +208,12 @@ Otherwise, evaluate current line."
 (defun scala-repl-eval-current-line ()
   "Send current line to the REPL and evaluate it."
   (interactive)
-  (scala-repl-eval-string (thing-at-point 'line)))
+  (scala-repl-eval-code-block (thing-at-point 'line)))
 
 (defun scala-repl-eval-buffer ()
   "Send current buffer to the REPL and evaluate it."
   (interactive)
-  (scala-repl-eval-string (buffer-string)))
+  (scala-repl-eval-code-block (buffer-string)))
 
 (defun scala-repl-eval-region ()
   "Send selected region to the REPL and evaluate it."
@@ -177,11 +221,11 @@ Otherwise, evaluate current line."
   (if (region-active-p)
       (progn
         (scala-repl--ensure-session-buffer)
-        (scala-repl-eval-string (buffer-substring (region-beginning)
+        (scala-repl-eval-code-block (buffer-substring (region-beginning)
                                                   (region-end))))
     (message "Region not active")))
 
-(defun scala-repl--ensure-session-buffer (&optional no-switch-p)
+(defun scala-repl--ensure-session-buffer ()
   "Ensure the session buffer is created."
   (if (and scala-repl-buffer-name
            (process-live-p (get-buffer-process scala-repl-buffer-name)))
@@ -194,18 +238,16 @@ Otherwise, evaluate current line."
            (command (scala-repl--get-command project-type)))
       (let ((default-directory project-root))
         (apply #'make-comint-in-buffer buffer-name buffer-name (car command) nil (cdr command)))
-      (unless no-switch-p
-        (switch-to-buffer-other-window buffer-name))
       buffer-name)))
 
-(defun scala-repl-eval-string (&optional string)
+(defun scala-repl-eval-code-block (&optional string)
   "Quote given STRING in braces, send it to the REPL and evaluate it."
   (interactive "MEval: ")
   (save-excursion
     (let* ((buffer-name (scala-repl--ensure-session-buffer)))
       (comint-send-string buffer-name (format "{\n%s}\n" string)))))
 
-(defun scala-repl-eval-raw-string (&optional string)
+(defun scala-repl-send-string (&optional string)
   "Send given raw STRING to the REPL and evaluate it."
   (interactive "MEval: ")
   (save-excursion
